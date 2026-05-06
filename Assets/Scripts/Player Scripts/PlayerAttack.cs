@@ -11,6 +11,7 @@ public class PlayerAttack : MonoBehaviour
     public int damage = 1;
     public float knockbackForce = 5f;
     public float knockbackDuration = 0.2f;
+    public float stunDuration = 0.75f;
 
     private void Start()
     {
@@ -40,7 +41,7 @@ public class PlayerAttack : MonoBehaviour
 
             if (health != null)
             {
-                DamageInfo info = new DamageInfo(damage, transform.position, knockbackForce, knockbackDuration, 0.1f);
+                DamageInfo info = new DamageInfo(damage, transform.position, knockbackForce, knockbackDuration, stunDuration);
 
                 health.TakeDamage(info);
             }

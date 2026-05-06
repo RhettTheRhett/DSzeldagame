@@ -15,12 +15,15 @@ public class TestEnemyMove : MonoBehaviour
 
     [Header("Detection")]
     public float agroRange = 5f;
+    public float memoryTime = 2f;
+    private float loseSightTimer;
     private Transform player;
 
     [Header("Collision")]
     public float playerRadius = 0.25f;
     public float playerHeight = 0.5f;
     public float maxSlopeAngle = 45f;
+    public float skinWidth = 0.05f;
 
     [Header("Physics")]
     public float gravity = -19.8f;
@@ -46,19 +49,38 @@ public class TestEnemyMove : MonoBehaviour
 
     private void FixedUpdate()
     {
-        HandleKnockback();
-
+        // -------- STUN --------
         if (stunTimer > 0)
         {
             stunTimer -= Time.deltaTime;
             return;
         }
 
-        if (knockbackTimer > 0) return;
-
-        if (player != null && Vector3.Distance(transform.position, player.position) <= agroRange)
+        // -------- KNOCKBACK --------
+        if (knockbackTimer > 0)
         {
-            MoveTowards(player.position);
+            HandleKnockback();
+            HandleGravity();
+            return;
+        }
+
+        // -------- NORMAL BEHAVIOR --------
+        if (player != null)
+        {
+            if (IsPlayerVisible())
+            {
+                loseSightTimer = memoryTime;
+                MoveTowards(player.position);
+            }
+            else if (loseSightTimer > 0)
+            {
+                loseSightTimer -= Time.deltaTime;
+                MoveTowards(player.position);
+            }
+            else
+            {
+                HandleWander();
+            }
         }
         else
         {
@@ -95,7 +117,7 @@ public class TestEnemyMove : MonoBehaviour
     // ======================
     private void MoveTowards(Vector3 target)
     {
-        Vector3 dir = (target - transform.position);
+        Vector3 dir = target - transform.position;
         dir.y = 0;
 
         if (dir.magnitude < 0.1f) return;
@@ -104,12 +126,34 @@ public class TestEnemyMove : MonoBehaviour
 
         float moveDistance = moveSpeed * Time.deltaTime;
 
-        if (!IsBlocked(dir, moveDistance))
+        // 🚫 BLOCKED → try sliding
+        if (IsBlocked(dir, moveDistance))
         {
-            MoveOnSurface(dir, moveDistance);
+            Vector3 dirX = new Vector3(dir.x, 0, 0).normalized;
+            if (dir.x != 0 && !IsBlocked(dirX, moveDistance))
+            {
+                MoveOnSurface(dirX, moveDistance);
+                Rotate(dirX);
+                return;
+            }
+
+            Vector3 dirZ = new Vector3(0, 0, dir.z).normalized;
+            if (dir.z != 0 && !IsBlocked(dirZ, moveDistance))
+            {
+                MoveOnSurface(dirZ, moveDistance);
+                Rotate(dirZ);
+                return;
+            }
+
+            return; // fully blocked
         }
 
-        // Rotate
+        MoveOnSurface(dir, moveDistance);
+        Rotate(dir);
+    }
+
+    private void Rotate(Vector3 dir)
+    {
         transform.forward = Vector3.Slerp(
             transform.forward,
             dir,
@@ -119,12 +163,16 @@ public class TestEnemyMove : MonoBehaviour
 
     private bool IsBlocked(Vector3 dir, float distance)
     {
+        // ✅ Correct capsule (center-safe)
+        Vector3 bottom = transform.position + Vector3.up * playerRadius;
+        Vector3 top = transform.position + Vector3.up * (playerHeight - playerRadius);
+
         return Physics.CapsuleCast(
-            transform.position,
-            transform.position + Vector3.up * playerHeight,
+            bottom,
+            top,
             playerRadius,
             dir,
-            distance
+            distance + skinWidth
         );
     }
 
@@ -170,6 +218,31 @@ public class TestEnemyMove : MonoBehaviour
     }
 
     // ======================
+    // LINE OF SIGHT
+    // ======================
+    private bool IsPlayerVisible()
+    {
+        if (player == null) return false;
+
+        Vector3 origin = transform.position + Vector3.up * (playerHeight * 0.5f);
+        Vector3 target = player.position + Vector3.up * 0.5f;
+
+        Vector3 dir = target - origin;
+        float dist = dir.magnitude;
+
+        if (dist > agroRange) return false;
+
+        dir.Normalize();
+
+        if (Physics.Raycast(origin, dir, out RaycastHit hit, dist))
+        {
+            return hit.transform == player;
+        }
+
+        return false;
+    }
+
+    // ======================
     // KNOCKBACK + STUN
     // ======================
     public void ApplyKnockback(Vector3 direction, float force, float duration)
@@ -185,37 +258,62 @@ public class TestEnemyMove : MonoBehaviour
 
     private void HandleKnockback()
     {
-        if (knockbackTimer > 0)
+        float moveDistance = knockbackVelocity.magnitude * Time.deltaTime;
+        Vector3 dir = knockbackVelocity.normalized;
+
+        if (!IsBlocked(dir, moveDistance))
         {
-            transform.position += knockbackVelocity * Time.deltaTime;
-
-            knockbackVelocity = Vector3.Lerp(
-                knockbackVelocity,
-                Vector3.zero,
-                knockbackDecay * Time.deltaTime
-            );
-
-            knockbackTimer -= Time.deltaTime;
+            MoveOnSurface(dir, moveDistance);
         }
+
+        knockbackVelocity = Vector3.Lerp(
+            knockbackVelocity,
+            Vector3.zero,
+            knockbackDecay * Time.deltaTime
+        );
+
+        knockbackTimer -= Time.deltaTime;
     }
-    
+
+    // ======================
+    // DEBUG GIZMOS
+    // ======================
     private void OnDrawGizmosSelected()
     {
-        // -------- Wander Area (Green) --------
+        // -------- Wander Area --------
         Gizmos.color = Color.green;
         Vector3 center = Application.isPlaying ? spawnPoint : transform.position;
         Gizmos.DrawWireSphere(center, wanderRadius);
 
-        // -------- Aggro Range (Yellow) --------
+        // -------- Aggro Range --------
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, agroRange);
 
-        // -------- Current Wander Target (Blue) --------
+        // -------- Wander Target --------
         if (Application.isPlaying)
         {
             Gizmos.color = Color.cyan;
             Gizmos.DrawSphere(wanderTarget, 0.2f);
             Gizmos.DrawLine(transform.position, wanderTarget);
         }
+
+        // -------- CAPSULE DEBUG --------
+        Gizmos.color = Color.red;
+
+        float radius = playerRadius;
+        float height = playerHeight;
+
+        Vector3 bottom = transform.position + Vector3.up * radius;
+        Vector3 top = transform.position + Vector3.up * (height - radius);
+
+        // Draw spheres (caps)
+        Gizmos.DrawWireSphere(bottom, radius);
+        Gizmos.DrawWireSphere(top, radius);
+
+        // Draw sides
+        Gizmos.DrawLine(bottom + Vector3.forward * radius, top + Vector3.forward * radius);
+        Gizmos.DrawLine(bottom - Vector3.forward * radius, top - Vector3.forward * radius);
+        Gizmos.DrawLine(bottom + Vector3.right * radius, top + Vector3.right * radius);
+        Gizmos.DrawLine(bottom - Vector3.right * radius, top - Vector3.right * radius);
     }
 }
