@@ -10,6 +10,7 @@ public class TestEnemyAttack : MonoBehaviour
 
     public float knockbackForce = 3f;
     public float knockbackDuration = 0.15f;
+    public float stunTime = 0.2f;
 
     private float lastAttackTime;
     private Transform target;
@@ -60,7 +61,7 @@ public class TestEnemyAttack : MonoBehaviour
                 transform.position,
                 knockbackForce,
                 knockbackDuration,
-                0.2f
+                stunTime
             );
 
             health.TakeDamage(info);
