@@ -39,12 +39,16 @@ public class PlayerMove : MonoBehaviour
     private float stunTimer;
     private float lastStepTime;
 
+    [Header("Animation")]
+    private Animator animator;
+    
     // Derived from characterHeight — feet and half height for readability
     private float HalfHeight => characterHeight * 0.5f;
 
     void Start()
     {
         moveAction = InputSystem.actions.FindAction("Move");
+        animator = GetComponentInChildren<Animator>();
     }
 
     void FixedUpdate()
@@ -54,6 +58,7 @@ public class PlayerMove : MonoBehaviour
         HandleKnockback();
         HandleGravity();
         RotatePlayer();
+        animator.SetBool("IsWalking", isWalking);
 
         if (stunTimer > 0) stunTimer -= Time.fixedDeltaTime;
 
@@ -206,6 +211,7 @@ public class PlayerMove : MonoBehaviour
     // =====================
     private void RotatePlayer()
     {
+        
         if (moveDir == Vector3.zero) return;
         transform.forward = Vector3.Slerp(transform.forward, moveDir, Time.fixedDeltaTime * rotateSpeed);
     }

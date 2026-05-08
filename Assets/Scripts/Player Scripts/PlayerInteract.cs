@@ -4,13 +4,15 @@ using UnityEngine.InputSystem;
 public class PlayerInteract : MonoBehaviour
 {
     public InputAction interactAction;
-
     public float interactDistance;
     public Vector3 interactCenter;
-    
+
+    private Animator animator;
+
     private void Start()
     {
         interactAction = InputSystem.actions.FindAction("Interact");
+        animator = GetComponentInChildren<Animator>();
     }
 
     private void Update()
@@ -18,6 +20,7 @@ public class PlayerInteract : MonoBehaviour
         interactCenter = transform.position;
         if (WasInteractPressed())
         {
+            animator.SetTrigger("Interact");
             Interact();
         }
     }
@@ -39,22 +42,21 @@ public class PlayerInteract : MonoBehaviour
             IInteractable interactable = hitCollider.GetComponentInParent<IInteractable>();
             if (interactable == null) continue;
 
-            Transform targetTransform = interactable.GetTransform();
+            // Use closest point on the collider instead of pivot position.
+            // On long objects this means the edge nearest the player is used
+            // for both distance and alignment checks, not the far-away center.
+            Vector3 closestPoint = hitCollider.ClosestPoint(interactCenter);
+            Vector3 toClosest = closestPoint - interactCenter;
+            float distance = toClosest.magnitude;
 
-            Vector3 toTarget = targetTransform.position - interactCenter;
-            float distance = toTarget.magnitude;
-
-            
             if (distance > interactDistance) continue;
 
-            Vector3 direction = toTarget.normalized;
+            // Avoid divide-by-zero if player is inside the collider
+            Vector3 direction = distance > 0.001f ? toClosest.normalized : transform.forward;
 
             float alignment = Vector3.Dot(direction, transform.forward);
-
-            
             if (alignment < 0.25f) continue;
 
-            
             float score = alignment * 2f - (distance / interactDistance);
 
             if (score > bestScore)
@@ -62,15 +64,15 @@ public class PlayerInteract : MonoBehaviour
                 bestScore = score;
                 bestTarget = interactable;
             }
-            
-            Debug.DrawLine(interactCenter, targetTransform.position, Color.yellow,1f);
+
+            Debug.DrawLine(interactCenter, closestPoint, Color.yellow, 1f);
         }
 
         if (bestTarget != null)
         {
-            Debug.DrawLine(interactCenter, bestTarget.GetTransform().position, Color.green,1f);
+            Debug.DrawLine(interactCenter, bestTarget.GetTransform().position, Color.green, 1f);
         }
-        
+
         if (bestTarget != null)
         {
             bestTarget.Interacted(gameObject);

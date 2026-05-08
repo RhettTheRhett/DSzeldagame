@@ -13,16 +13,22 @@ public class PlayerAttack : MonoBehaviour
     public float knockbackDuration = 0.2f;
     public float stunDuration = 0.75f;
 
+    private Animator animator;
+    
     private void Start()
     {
         attackAction = InputSystem.actions.FindAction("Attack");
+        
+        animator = GetComponentInChildren<Animator>();
     }
 
     private void Update()
     {
         if (attackAction.WasPressedThisFrame())
         {
+            animator.SetTrigger("Slash");
             PerformAttack();
+            
         }
     }
 

@@ -916,7 +916,7 @@
                 {
                     "name": "",
                     "id": "f009f78e-0679-4225-aefa-09a2d80a3ad5",
-                    "path": "<XInputController>/start",
+                    "path": "<Gamepad>/start",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
