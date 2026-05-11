@@ -40,6 +40,8 @@ public class EnemyMove : MonoBehaviour
     private float knockbackTimer;
     private float stunTimer;
 
+    private EnemyAttack enemyAttack;
+    
     private float HalfHeight => characterHeight * 0.5f;
 
     private void Start()
@@ -48,7 +50,8 @@ public class EnemyMove : MonoBehaviour
 
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null) player = playerObj.transform;
-
+        enemyAttack = GetComponent<EnemyAttack>();
+        
         PickNewWanderTarget();
     }
 
@@ -102,8 +105,13 @@ public class EnemyMove : MonoBehaviour
     // =====================
     // MOVEMENT
     // =====================
+    
     private void HandleMove(Vector3 dir)
     {
+        // Stop moving while in attack range or during post-attack pause.
+        
+        if (enemyAttack != null && enemyAttack.ShouldStopMoving) return;
+
         dir.y = 0;
         if (dir.magnitude < 0.1f) return;
         dir.Normalize();

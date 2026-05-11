@@ -10,18 +10,26 @@ public class EnemyAttack : MonoBehaviour
     public float knockbackDuration = 0.15f;
     public float stunDuration = 0.2f;
 
-    // How long the enemy waits before attacking after FIRST entering attack range.
-    // Prevents the enemy from instantly hitting the player on contact.
+    // How long the enemy waits before attacking after entering attack range.
     public float firstAttackDelay = 0.6f;
+
+    // How long the enemy stands still after landing an attack before
+    // moving again. Gives attacks visual weight and prevents jittering
+    // in and out of range immediately after hitting.
+    public float postAttackPause = 0.5f;
 
     private float lastAttackTime;
     private Transform player;
     private IHasHealth playerHealth;
 
-    // Tracks whether we've entered attack range since last exit
     private bool inRangeLastFrame = false;
-    // Timer for the initial entry delay
     private float entryDelayTimer = 0f;
+    private float postAttackPauseTimer = 0f;
+
+    // EnemyMove polls these to decide whether to stop moving
+    public bool IsInAttackRange => player != null &&
+        Vector3.Distance(transform.position, player.position) <= attackRange;
+    public bool ShouldStopMoving => IsInAttackRange || postAttackPauseTimer > 0;
 
     void Start()
     {
@@ -37,29 +45,26 @@ public class EnemyAttack : MonoBehaviour
     {
         if (player == null || playerHealth == null) return;
 
-        float distance = Vector3.Distance(transform.position, player.position);
-        bool inRange = distance <= attackRange;
+        if (postAttackPauseTimer > 0)
+        {
+            postAttackPauseTimer -= Time.deltaTime;
+            return;
+        }
+
+        bool inRange = IsInAttackRange;
 
         if (inRange)
         {
             if (!inRangeLastFrame)
-            {
-                // Just entered range — start the entry delay
                 entryDelayTimer = firstAttackDelay;
-            }
 
             if (entryDelayTimer > 0)
-            {
                 entryDelayTimer -= Time.deltaTime;
-            }
             else
-            {
                 TryAttack();
-            }
         }
         else
         {
-            // Reset entry delay when player leaves range
             entryDelayTimer = 0f;
         }
 
@@ -80,6 +85,10 @@ public class EnemyAttack : MonoBehaviour
 
         playerHealth.TakeDamage(info);
         lastAttackTime = Time.time;
+
+        // Start the post-attack pause so the enemy doesn't immediately
+        // shuffle back into range and attack again
+        postAttackPauseTimer = postAttackPause;
     }
 
     private void OnDrawGizmosSelected()

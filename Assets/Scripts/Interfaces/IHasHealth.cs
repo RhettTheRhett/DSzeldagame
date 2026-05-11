@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public interface IHasHealth
+public interface IHasHealth 
 {
     int getMaxHealth();
     int getCurrentHealth();
