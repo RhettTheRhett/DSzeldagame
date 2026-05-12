@@ -43,13 +43,13 @@ public class PlayerAttack : MonoBehaviour
         {
             if (col.transform.root == transform) continue;
 
-            IHasHealth health = col.GetComponentInParent<IHasHealth>();
+            IHittable hittable = col.GetComponentInParent<IHittable>();
 
-            if (health != null)
+            if (hittable != null)
             {
                 DamageInfo info = new DamageInfo(damage, transform.position, knockbackForce, knockbackDuration, stunDuration);
 
-                health.TakeDamage(info);
+                hittable.OnHit(info);
             }
         }
     }

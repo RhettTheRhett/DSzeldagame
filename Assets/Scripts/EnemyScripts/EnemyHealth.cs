@@ -1,17 +1,21 @@
 using UnityEngine;
 
-public class EnemyHealth : MonoBehaviour, IHasHealth
+public class EnemyHealth : MonoBehaviour, IHasHealth, IHittable, IDropper
 {
     public int maxHealth = 3;
     public int currentHealth;
 
-    // Briefly prevents the same hit from registering twice on the same frame
     public float invincibilityTime = 0.2f;
     private float invincibilityTimer;
+    
+    public LootTable lootTable;
+
+    private EnemyMove move;
 
     void Awake()
     {
         currentHealth = maxHealth;
+        move = GetComponent<EnemyMove>();
     }
 
     void Update()
@@ -22,6 +26,7 @@ public class EnemyHealth : MonoBehaviour, IHasHealth
 
     public int getMaxHealth() => maxHealth;
     public int getCurrentHealth() => currentHealth;
+    public void OnHit(DamageInfo info) => TakeDamage(info);
 
     public void TakeDamage(DamageInfo info)
     {
@@ -30,8 +35,7 @@ public class EnemyHealth : MonoBehaviour, IHasHealth
         currentHealth -= info.damage;
         invincibilityTimer = invincibilityTime;
 
-        // Works with either EnemyMove (Rigidbody) automatically
-        EnemyMove move = GetComponent<EnemyMove>();
+        
         if (move != null)
         {
             Vector3 dir = transform.position - info.sourcePosition;
@@ -53,7 +57,14 @@ public class EnemyHealth : MonoBehaviour, IHasHealth
 
     public void Die()
     {
+        Drop();
         Debug.Log($"{name} died");
         Destroy(gameObject);
+    }
+
+    public void Drop()
+    {
+        if (lootTable != null)
+            lootTable.Drop(transform.position);
     }
 }

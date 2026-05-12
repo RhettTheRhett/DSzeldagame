@@ -33,12 +33,8 @@ public class EnemyAttack : MonoBehaviour
 
     void Start()
     {
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj != null)
-        {
-            player = playerObj.transform;
-            playerHealth = playerObj.GetComponent<IHasHealth>();
-        }
+        player = PlayerRef.Transform;
+        playerHealth = PlayerRef.Health;
     }
 
     void Update()

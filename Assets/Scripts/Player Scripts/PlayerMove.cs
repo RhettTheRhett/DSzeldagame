@@ -123,16 +123,21 @@ public class PlayerMove : MonoBehaviour
     private void TrySlide(Vector3 dir)
     {
         Vector3 dirX = new Vector3(dir.x, 0, 0).normalized;
+        Vector3 dirZ = new Vector3(0, 0, dir.z).normalized;
+
         if (dir.x != 0 && !IsBlocked(dirX, moveDistance))
         {
-            MoveOnSurface(dirX, moveDistance);
+            // How aligned is the intended direction with the slide direction.
+            // Close to 1 = nearly parallel to wall, close to 0 = nearly head-on.
+            float alignment = Mathf.Abs(Vector3.Dot(dir, dirX));
+            MoveOnSurface(dirX, moveDistance * alignment);
             return;
         }
 
-        Vector3 dirZ = new Vector3(0, 0, dir.z).normalized;
         if (dir.z != 0 && !IsBlocked(dirZ, moveDistance))
         {
-            MoveOnSurface(dirZ, moveDistance);
+            float alignment = Mathf.Abs(Vector3.Dot(dir, dirZ));
+            MoveOnSurface(dirZ, moveDistance * alignment);
         }
     }
 
